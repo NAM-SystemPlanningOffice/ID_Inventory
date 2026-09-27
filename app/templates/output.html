@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}リスト出力 - ID棚卸システム{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>リスト出力</h2>
+</div>
+
+<div class="output-container">
+    <div class="card">
+        <h3>ユーザー棚卸リスト</h3>
+        <div class="card-content">
+            <p>在籍ユーザーとの照合を行い、システムごとにシート出力します（現時点の状態）</p>
+            <form id="tanaoroshi-form">
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">棚卸リスト出力</button>
+                </div>
+            </form>
+            <div id="tanaoroshi-result" class="result-message"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>退職者ID削除依頼書・組織転出者アクセス権限確認リスト</h3>
+        <div class="card-content">
+            <p>過去60日間の退職・異動がある日を選択してリストを出力します</p>
+
+            <p class="note">※ 同一組織内の昇進や組織変更による異動は転出者リストの対象外となりますので、プルダウンの異動件数と出力件数は異なる場合があります。件数が違いが気になった時は nam_user_admin.e_imdb_ido で確認して下さい。</p>
+
+            <div id="date-list-loading" class="loading">日付リストを読み込み中...</div>
+            <div id="date-list-error" class="error-message" style="display: none;"></div>
+
+            <form id="taishoku-tenshutu-form" style="display: none;">
+                <div class="form-group">
+                    <label for="target-date">対象日を選択:</label>
+                    <select id="target-date" class="form-control" required>
+                        <option value="">選択してください</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">退職者・転出者リスト出力</button>
+                </div>
+            </form>
+            <div id="taishoku-tenshutu-result" class="result-message"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/output.js') }}"></script>
+{% endblock %}

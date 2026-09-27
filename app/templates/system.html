@@ -1,0 +1,452 @@
+{% extends "base.html" %}
+
+{% block title %}システム定義 - ID棚卸システム{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>システム定義</h2>
+    <button class="btn btn-primary" onclick="openCreateModal()">新規登録</button>
+</div>
+
+<div class="system-container">
+    <div class="card">
+        <h3>登録済みシステム一覧</h3>
+        <div class="card-content">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>システムID</th>
+                        <th>システム名</th>
+                        <th>取り込み方法</th>
+                        <th>出力要否</th>
+                        <th>確認頻度</th>
+                        <th>確認担当</th>
+                        <th>最終取り込み日時</th>
+                        <th>状態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for system in systems %}
+                    <tr>
+                        <td>{{ system.system_id }}</td>
+                        <td>{{ system.system_name }}</td>
+                        <td>{{ system.import_method or '-' }}</td>
+                        <td>{{ '必要' if system.output_required else '不要' }}</td>
+                        <td>{{ '月次' if system.check_frequency == 'MONTHLY' else '年次（5月）' if system.check_frequency == 'ANNUAL' else '不要' if system.check_frequency == 'NONE' else '-' }}</td>
+                        <td>{{ system.check_responsible or '-' }}</td>
+                        <td>
+                            {% if system.last_import_datetime %}
+                                {{ system.last_import_datetime.strftime('%Y-%m-%d %H:%M:%S') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ '有効' if system.is_active else '無効' }}</td>
+                        <td>
+                            <button class="btn btn-small" onclick="viewSystem('{{ system.system_id }}')">詳細</button>
+                            <button class="btn btn-small" onclick="editSystem('{{ system.system_id }}')">編集</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="system-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h3 id="modal-title">システム詳細</h3>
+        <div id="modal-body"></div>
+    </div>
+</div>
+
+<div id="edit-modal" class="modal">
+    <div class="modal-content modal-large">
+        <span class="close" onclick="closeEditModal()">&times;</span>
+        <h3>システム編集</h3>
+        <form id="edit-system-form">
+            <input type="hidden" id="edit-system-id" name="system_id">
+
+            <div class="form-section">
+                <h4>基本情報</h4>
+                <div class="form-group" id="system-id-field" style="display: none;">
+                    <label for="edit-system-id-input">システムID <span class="required">*</span></label>
+                    <input type="text" id="edit-system-id-input" name="system_id_input" pattern="[a-z0-9_]+" maxlength="50">
+                    <small>小文字英数字とアンダースコアのみ（例: sap_hr, active_directory）</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-system-name">システム名 <span class="required">*</span></label>
+                    <input type="text" id="edit-system-name" name="system_name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-description">説明</label>
+                    <textarea id="edit-description" name="description" rows="2"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-output-order">出力順</label>
+                        <input type="number" id="edit-output-order" name="output_order" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-output-sheet-name">出力シート名</label>
+                        <input type="text" id="edit-output-sheet-name" name="output_sheet_name">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h4>取り込み設定</h4>
+                <div class="form-group">
+                    <label for="edit-import-method">取り込み方法 <span class="required">*</span></label>
+                    <select id="edit-import-method" name="import_method" required>
+                        <option value="">選択してください</option>
+                        <option value="CSV">CSV</option>
+                        <option value="XLSX">XLSX</option>
+                        <option value="DIRECT">Oracle直接参照</option>
+                    </select>
+                </div>
+
+                <div id="direct-import-section" class="form-group" style="display: none;">
+                    <label for="edit-import-table-name">参照元テーブル/SQL <span class="required" id="import-table-name-required">*</span></label>
+                    <textarea id="edit-import-table-name" name="import_table_name" rows="8" placeholder="例：
+■ DIRECT の場合（必須）：
+  シンプル: SCHEMA.TABLE_NAME
+  JOIN: SELECT U.USER_CD, U.USER_NAME, D.DEPT_NAME
+        FROM SCHEMA.USERS U LEFT JOIN SCHEMA.DEPT D ON U.DEPT_CD = D.DEPT_CD
+  WITH句: WITH dept AS (...) SELECT ... FROM dept
+
+■ CSV/XLSX の場合（任意）：
+  未指定: T_SYSTEM_USERS_システムID（デフォルト）
+  指定: SELECT * FROM T_SYSTEM_USERS_XXX WHERE STATUS = 'ACTIVE'
+        （取り込み後の追加フィルタ処理が必要な場合）"></textarea>
+                    <small id="import-table-name-help">
+                        <span id="help-direct" style="display:none;">テーブル名のみの場合は SELECT * が自動付与されます。SELECT または WITH で始まる場合はSQL文として扱われます。</span>
+                        <span id="help-file" style="display:none;">未指定の場合は T_SYSTEM_USERS_システムID が使用されます。取り込み後に追加のフィルタ処理が必要な場合のみ指定してください。</span>
+                    </small>
+                </div>
+
+                <div class="form-group" id="mapping-section">
+                    <label>マッピング定義</label>
+                    <div class="tabs">
+                        <button type="button" class="tab-button active" onclick="switchTab('mapping', 'builder')">フォーム入力</button>
+                        <button type="button" class="tab-button" onclick="switchTab('mapping', 'json')">JSON直接入力</button>
+                    </div>
+
+                    <div id="mapping-builder" class="tab-content active">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="mapping-encoding">ファイルエンコーディング</label>
+                                <select id="mapping-encoding">
+                                    <option value="utf-8-sig">UTF-8（BOM付き・BOMなし両対応）</option>
+                                    <option value="shift-jis">Shift-JIS</option>
+                                    <option value="cp932">CP932</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="mapping-delimiter">区切り文字</label>
+                                <select id="mapping-delimiter">
+                                    <option value=",">カンマ (,)</option>
+                                    <option value="\t">タブ (\t)</option>
+                                    <option value=";">セミコロン (;)</option>
+                                    <option value="|">パイプ (|)</option>
+                                    <option value="custom">カスタム</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="delimiter-custom-group" style="display: none;">
+                                <label for="mapping-delimiter-custom">カスタム区切り文字</label>
+                                <input type="text" id="mapping-delimiter-custom" maxlength="5" placeholder="例: ::">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group" id="sheet-name-group">
+                                <label for="mapping-sheet-name">シート名（XLSX用）</label>
+                                <input type="text" id="mapping-sheet-name" placeholder="未指定の場合は最初のシート">
+                                <small>XLSXファイルで複数シートがある場合、取り込み対象のシート名を指定してください</small>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="mapping-quotechar">クォート文字</label>
+                                <select id="mapping-quotechar">
+                                    <option value='"'>ダブルクォート (")</option>
+                                    <option value="'">シングルクォート (')</option>
+                                    <option value="">なし</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="mapping-has-header" checked>
+                                    ヘッダー行あり
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label for="mapping-skip-rows">スキップ行数</label>
+                                <input type="number" id="mapping-skip-rows" value="0" min="0">
+                            </div>
+                        </div>
+
+                        <h5>カラム定義</h5>
+                        <div class="info-box">
+                            <strong>ヘッダー行あり:</strong> 元カラム名を入力<br>
+                            <strong>ヘッダー行なし:</strong> 列番号を入力（0始まり）
+                        </div>
+                        <table class="mapping-table">
+                            <thead>
+                                <tr>
+                                    <th>元カラム名<br><small>（ヘッダーあり時）</small></th>
+                                    <th>列番号<br><small>（0始まり）</small></th>
+                                    <th>DBカラム名<br><small class="required">（必須）</small></th>
+                                    <th>データ型</th>
+                                    <th>必須</th>
+                                    <th>トリム</th>
+                                    <th>変換</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mapping-columns-body">
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-small" onclick="addMappingColumn()">+ 列を追加</button>
+                    </div>
+
+                    <div id="mapping-json" class="tab-content">
+                        <textarea id="edit-import-mapping-json" name="import_mapping_json" rows="10" class="json-field"></textarea>
+                    </div>
+                    <small>マッピング定義を変更するとテーブルが再作成されます</small>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h4>出力設定</h4>
+                <div class="form-notice" style="margin-bottom: 1rem; padding: 10px 12px; border: 1px solid #e0b400; background: #fff8e1; border-radius: 4px; font-size: 0.9em; line-height: 1.6;">
+                    <strong>⚠ 取り込み設定（参照元テーブル/SQL・マッピング）を変更した場合のご注意</strong>
+                    <ul style="margin: 6px 0 0 0; padding-left: 20px;">
+                        <li>取り込み設定を変更しても、一旦「更新」してからこの編集画面を開き直さないと、出力カラム定義の選択肢に変更内容が反映されません。</li>
+                        <li>取り込み設定の修正後は、更新時に修正後の内容でエラーチェックが行われます。削除したカラム名は、出力カラム定義・フィルタSQL・出力ソート順からも忘れずに削除してください。</li>
+                    </ul>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="edit-output-required" name="output_required" value="1">
+                            出力要
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-tanaoroshi-mode">棚卸出力モード</label>
+                        <select id="edit-tanaoroshi-mode" name="tanaoroshi_output_mode">
+                            <option value="ALL">全ユーザー</option>
+                            <option value="MISMATCH_ONLY">不一致のみ</option>
+                            <option value="CUSTOM">カスタム</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>棚卸リスト出力項目定義</label>
+                    <div class="tabs">
+                        <button type="button" class="tab-button active" onclick="switchTab('tanaoroshi-output', 'builder')">フォーム入力</button>
+                        <button type="button" class="tab-button" onclick="switchTab('tanaoroshi-output', 'json')">JSON直接入力</button>
+                    </div>
+
+                    <div id="tanaoroshi-output-builder" class="tab-content active">
+                        <h5>棚卸リスト出力カラム定義</h5>
+                        <table class="mapping-table">
+                            <thead>
+                                <tr>
+                                    <th>ソース</th>
+                                    <th>カラム名</th>
+                                    <th>表示名</th>
+                                    <th>順序</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tanaoroshi-output-columns-body">
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-small" onclick="addTanaoroshiOutputColumn()">+ 列を追加</button>
+                    </div>
+
+                    <div id="tanaoroshi-output-json" class="tab-content">
+                        <textarea id="edit-tanaoroshi-output-columns-json" name="tanaoroshi_output_columns_json" rows="8" class="json-field"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-tanaoroshi-filter-sql">棚卸フィルタSQL（CUSTOM時）</label>
+                    <textarea id="edit-tanaoroshi-filter-sql" name="tanaoroshi_filter_sql" rows="3"></textarea>
+                    <small>
+                        システムのカラムを's.'、在籍情報を'z.'で参照できます。<br>
+                        例: s.STATUS = 'ACTIVE' AND z.POST_NAME LIKE '%部長%'<br>
+                        【在籍情報カラム】z.USER_CD, z.USER_NAME, z.SHOZOKU, z.POST_NAME, z.HONMU, z.KENMU<br>
+                        ※ IMPORT_TABLE_NAMEにSQLが指定されている場合、そのSQLの結果カラムを参照します。
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-tanaoroshi-sort-sql">棚卸リスト出力ソート順</label>
+                    <textarea id="edit-tanaoroshi-sort-sql" name="tanaoroshi_sort_sql" rows="2"></textarea>
+                    <small>
+                        例: z.SHOZOKU ASC, s.USER_CD ASC （s: システム、z: 在籍）<br>
+                        【在籍情報カラム】z.USER_CD, z.USER_NAME, z.SHOZOKU, z.POST_NAME, z.HONMU, z.KENMU
+                    </small>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h4>転出者リスト設定</h4>
+                <div class="form-group">
+                    <label>転出者リスト出力項目定義</label>
+                    <div class="tabs">
+                        <button type="button" class="tab-button active" onclick="switchTab('tenshutu-output', 'builder')">フォーム入力</button>
+                        <button type="button" class="tab-button" onclick="switchTab('tenshutu-output', 'json')">JSON直接入力</button>
+                    </div>
+
+                    <div id="tenshutu-output-builder" class="tab-content active">
+                        <h5>転出者リスト出力カラム定義</h5>
+                        <table class="mapping-table">
+                            <thead>
+                                <tr>
+                                    <th>ソース</th>
+                                    <th>カラム名</th>
+                                    <th>表示名</th>
+                                    <th>順序</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tenshutu-output-columns-body">
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-small" onclick="addTenshutuOutputColumn()">+ 列を追加</button>
+                    </div>
+
+                    <div id="tenshutu-output-json" class="tab-content">
+                        <textarea id="edit-tenshutu-output-columns-json" name="tenshutu_output_columns_json" rows="8" class="json-field"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-tenshutu-filter-sql">転出者リストフィルタSQL</label>
+                    <textarea id="edit-tenshutu-filter-sql" name="tenshutu_filter_sql" rows="3"></textarea>
+                    <small>
+                        システムのカラムを's.'、転出者情報を't.'で参照できます。<br>
+                        例: s.STATUS = 'ACTIVE' AND s.ROLE_TYPE != 'guest'<br>
+                        【転出者情報カラム】t.USER_CD, t.USER_NAME, t.IDO_DATE, t.BEFORE_ORG, t.AFTER_ORG<br>
+                        ※ IMPORT_TABLE_NAMEにSQLが指定されている場合、そのSQLの結果カラムを参照します。
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-tenshutu-sort-sql">転出者リスト出力ソート順</label>
+                    <textarea id="edit-tenshutu-sort-sql" name="tenshutu_sort_sql" rows="2"></textarea>
+                    <small>
+                        例: t.BEFORE_ORG ASC, s.USER_CD ASC （s: システム、t: 転出者情報）<br>
+                        【転出者情報カラム】t.USER_CD, t.USER_NAME, t.IDO_DATE, t.BEFORE_ORG, t.AFTER_ORG
+                    </small>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h4>退職者リスト設定</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="edit-taishoku-required" name="taishoku_output_required" value="1">
+                            退職時出力要
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-taishoku-order">退職時出力順</label>
+                        <input type="number" id="edit-taishoku-order" name="taishoku_output_order" min="1">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-taishoku-display-sql">退職者リスト表示SQL</label>
+                    <textarea id="edit-taishoku-display-sql" name="taishoku_display_sql" rows="3"></textarea>
+                    <small>例: S.ACCOUNT_STATUS または CASE WHEN ... END</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-taishoku-disabled-expression">無効化済み判定SQL</label>
+                    <textarea id="edit-taishoku-disabled-expression" name="taishoku_disabled_expression" rows="3" placeholder="例: S.STATUS IS NULL OR S.STATUS != 'active'"></textarea>
+                    <small>
+                        無効化済みの条件式（SQL）を入力。システムが自動的に CASE WHEN [条件式] THEN '－' ELSE NULL END に展開します。<br>
+                        退職者リスト表示SQLと同じテーブルエイリアス（S.）を使用可能。<br>
+                        例: S.ACCOUNT_STATUS = 'Disabled' / S.STATUS IN ('Disabled', 'Suspended') / S.USER_CD IS NULL
+                    </small>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h4>確認情報</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-check-frequency">確認頻度</label>
+                        <select id="edit-check-frequency" name="check_frequency">
+                            <option value="MONTHLY">月次</option>
+                            <option value="ANNUAL">年次（5月）</option>
+                            <option value="NONE">不要</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-check-responsible">確認担当</label>
+                        <input type="text" id="edit-check-responsible" name="check_responsible" maxlength="50" placeholder="ユーザーID">
+                        <small>システム担当者のユーザーIDを入力</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-output-scope">出力範囲</label>
+                    <textarea id="edit-output-scope" name="output_scope" rows="2" maxlength="500" placeholder="例: 全社員、営業部のみ、管理者権限保有者のみ"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-check-points">確認ポイント</label>
+                    <textarea id="edit-check-points" name="check_points" rows="2" maxlength="500" placeholder="例: 退職者のアカウントが無効化されているか、権限が適切に付与されているか"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-check-remarks">備考（確認関連）</label>
+                    <textarea id="edit-check-remarks" name="check_remarks" rows="2" maxlength="500"></textarea>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h4>その他</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="edit-is-active" name="is_active" value="1" checked>
+                        有効
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-remarks">備考</label>
+                    <textarea id="edit-remarks" name="remarks" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">保存</button>
+                <button type="button" class="btn" onclick="closeEditModal()">キャンセル</button>
+            </div>
+
+            <div id="edit-result" class="result-message"></div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/form_builder.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='js/system.js') }}?v=2"></script>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}組織変更 - ID棚卸システム{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>組織変更入力</h2>
+</div>
+
+<div class="organization-container">
+    <div class="card">
+        <h3>組織変更登録</h3>
+        <div class="card-content">
+            <form id="org-change-form">
+                <div class="form-group">
+                    <label for="change-date">変更日:</label>
+                    <input type="date" id="change-date" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="before-org-cd">変更前組織コード:</label>
+                        <input type="text" id="before-org-cd" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="before-org-name">変更前組織名:</label>
+                        <input type="text" id="before-org-name">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="after-org-cd">変更後組織コード:</label>
+                        <input type="text" id="after-org-cd" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="after-org-name">変更後組織名:</label>
+                        <input type="text" id="after-org-name">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="remarks">備考:</label>
+                    <textarea id="remarks" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">登録</button>
+                </div>
+            </form>
+            <div id="org-result" class="result-message"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>登録済み組織変更一覧</h3>
+        <div class="card-content">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>変更日</th>
+                        <th>変更前組織コード</th>
+                        <th>変更前組織名</th>
+                        <th>変更後組織コード</th>
+                        <th>変更後組織名</th>
+                        <th>備考</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for change in changes %}
+                    <tr>
+                        <td>{{ change.change_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ change.before_org_cd }}</td>
+                        <td>{{ change.before_org_name or '-' }}</td>
+                        <td>{{ change.after_org_cd }}</td>
+                        <td>{{ change.after_org_name or '-' }}</td>
+                        <td>{{ change.remarks or '-' }}</td>
+                        <td>
+                            <button class="btn btn-small btn-danger"
+                                    onclick="deleteChange('{{ change.change_date.strftime('%Y-%m-%d') }}', '{{ change.before_org_cd }}', '{{ change.after_org_cd }}')">
+                                削除
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/organization.js') }}"></script>
+{% endblock %}

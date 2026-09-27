@@ -1,0 +1,39 @@
+-- サンプルデータに無効化済み判定式を追加（条件式のみ入力、CASE文は自動生成）
+
+-- Windows (仮のサンプル)
+-- 例: ACCOUNT_STATUS が 'Disabled' または 'Suspended' の場合は無効化済み
+UPDATE NAM_IAM_ADMIN.IDINV_SYSTEM_DEFINITIONS
+SET TAISHOKU_DISABLED_EXPRESSION = 'S.ACCOUNT_STATUS IN (''Disabled'', ''Suspended'')'
+WHERE SYSTEM_ID = 'windows';
+
+-- Gmail (仮のサンプル)
+-- 例: ACCOUNT_STATUS が 'Suspended' の場合は無効化済み
+UPDATE NAM_IAM_ADMIN.IDINV_SYSTEM_DEFINITIONS
+SET TAISHOKU_DISABLED_EXPRESSION = 'S.ACCOUNT_STATUS = ''Suspended'''
+WHERE SYSTEM_ID = 'gmail';
+
+-- Zoom (仮のサンプル)
+-- 例: STATUS が NULL または 'active' 以外の場合は無効化済み
+UPDATE NAM_IAM_ADMIN.IDINV_SYSTEM_DEFINITIONS
+SET TAISHOKU_DISABLED_EXPRESSION = 'S.STATUS IS NULL OR S.STATUS != ''active'''
+WHERE SYSTEM_ID = 'zoom';
+
+-- Splashtop (仮のサンプル)
+-- 例: ACCOUNT_STATUS が 'Disabled' の場合は無効化済み
+UPDATE NAM_IAM_ADMIN.IDINV_SYSTEM_DEFINITIONS
+SET TAISHOKU_DISABLED_EXPRESSION = 'S.ACCOUNT_STATUS = ''Disabled'''
+WHERE SYSTEM_ID = 'splashtop';
+
+-- SAP人事システム (仮のサンプル)
+-- 例: USER_CD が null または空文字列の場合は無効化済み（データなし）
+UPDATE NAM_IAM_ADMIN.IDINV_SYSTEM_DEFINITIONS
+SET TAISHOKU_DISABLED_EXPRESSION = 'S.USER_CD IS NULL OR S.USER_CD = '''''
+WHERE SYSTEM_ID = 'sap_hr';
+
+-- Active Directory (仮のサンプル)
+-- 例: ACCOUNT_STATUS が 'False' の場合は無効化済み
+UPDATE NAM_IAM_ADMIN.IDINV_SYSTEM_DEFINITIONS
+SET TAISHOKU_DISABLED_EXPRESSION = 'S.ACCOUNT_STATUS = ''False'' OR S.ACCOUNT_STATUS IS NULL'
+WHERE SYSTEM_ID = 'active_directory';
+
+COMMIT;

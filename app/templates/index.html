@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}ホーム - ID棚卸システム{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>ホーム</h2>
+</div>
+
+<div class="dashboard">
+    <div class="card">
+        <h3>リスト出力</h3>
+        <div class="card-content">
+            <p>ユーザー棚卸リスト、退職者ID削除依頼書、組織転出者アクセス権限確認リストを出力します</p>
+            <a href="{{ url_for('output.index') }}" class="btn btn-primary">リスト出力画面へ</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>データ取り込み状況</h3>
+        <div class="card-content">
+            {% if import_status %}
+            <p><strong>最も古い取り込み日時:</strong>
+                {% if import_status.oldest_import_datetime %}
+                    <span class="import-datetime">{{ import_status.oldest_import_datetime }}</span>
+                    <a href="{{ url_for('import_bp.index') }}" class="link-detail">(詳細)</a>
+                {% else %}
+                    <span class="warning">未取り込みのシステムがあります</span>
+                {% endif %}
+            </p>
+            {% endif %}
+            <a href="{{ url_for('import_bp.index') }}" class="btn btn-primary">データ取り込み画面へ</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>システム管理</h3>
+        <div class="card-content">
+            <p>各システムの定義情報を管理します</p>
+            <a href="{{ url_for('system.index') }}" class="btn btn-primary">システム定義画面へ</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>組織変更管理</h3>
+        <div class="card-content">
+            <p>組織体制変更の情報を管理します</p>
+            <a href="{{ url_for('organization.index') }}" class="btn btn-primary">組織変更入力画面へ</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
+{% endblock %}

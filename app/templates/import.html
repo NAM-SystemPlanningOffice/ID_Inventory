@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}データ取り込み - ID棚卸システム{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>データ取り込み</h2>
+</div>
+
+<div class="import-container">
+    <div class="card">
+        <h3>ファイルアップロード</h3>
+        <div class="card-content">
+            <form id="upload-form" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="system-select">システム:</label>
+                    <select id="system-select" name="system_id" required>
+                        <option value="">システムを選択してください</option>
+                        {% for system in systems %}
+                        {% if system.import_method != 'DIRECT' %}
+                        <option value="{{ system.system_id }}">{{ system.system_name }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="file-input">ファイル (CSV/XLSX):</label>
+                    <input type="file" id="file-input" name="file" accept=".csv,.xlsx" required>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">アップロード</button>
+                </div>
+            </form>
+
+            <div id="upload-result" class="result-message"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Oracle直接参照システム</h3>
+        <div class="card-content">
+            <p class="info-text">以下のシステムは既存Oracleテーブルを直接参照します。データ取り込みは不要です。</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>システム名</th>
+                        <th>参照元</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for system in systems %}
+                    {% if system.import_method == 'DIRECT' %}
+                    <tr>
+                        <td>{{ system.system_name }}</td>
+                        <td>
+                            <code class="sql-preview">{{ system.import_table_name[:80] }}{% if system.import_table_name|length > 80 %}...{% endif %}</code>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>取り込み状況</h3>
+        <div class="card-content">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>システム名</th>
+                        <th>取り込み方法</th>
+                        <th>最終取り込み日時</th>
+                        <th>取り込みユーザー</th>
+                        <th>レコード数</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for system in systems %}
+                    <tr>
+                        <td>{{ system.system_name }}</td>
+                        <td>
+                            {% if system.import_method == 'DIRECT' %}
+                                <span class="badge badge-info">Oracle直接参照</span>
+                            {% elif system.import_method == 'CSV' %}
+                                <span class="badge badge-default">CSV</span>
+                            {% elif system.import_method == 'XLSX' %}
+                                <span class="badge badge-default">XLSX</span>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if system.import_method == 'DIRECT' %}
+                                <span class="badge badge-success">常に最新</span>
+                            {% elif system.last_import_datetime %}
+                                {{ system.last_import_datetime.strftime('%Y-%m-%d %H:%M:%S') }}
+                            {% else %}
+                                <span class="warning">未取り込み</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if system.import_method in ('CSV', 'XLSX') %}
+                                {{ system.last_import_user or '-' }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if system.import_method == 'DIRECT' %}
+                                <span class="text-muted">-</span>
+                            {% else %}
+                                {{ system.last_import_record_count or '-' }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/import.js') }}"></script>
+{% endblock %}

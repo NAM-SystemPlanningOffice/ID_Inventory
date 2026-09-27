@@ -1,0 +1,24 @@
+# Web Framework
+Flask==3.0.0
+werkzeug==3.0.1
+
+# WSGI Server for Azure App Service
+gunicorn==21.2.0
+
+# Database (Thin mode - no C libraries required)
+oracledb>=2.3.0
+
+# Configuration
+python-dotenv==1.0.0
+
+# Google Sheets API
+gspread==5.12.0
+google-auth==2.25.0
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+
+# File Processing
+openpyxl==3.1.2
+
+# Testing
+pytest==7.4.3

@@ -1,0 +1,6 @@
+samAccountName,displayName,department,mail,enabled
+yamada_t,山田太郎,総務部,yamada@example.com,True
+sato_h,佐藤花子,営業部,sato@example.com,True
+suzuki_i,鈴木一郎,総務部,suzuki@example.com,True
+tanaka_m,田中美咲,開発部,tanaka@example.com,True
+takahashi_k,高橋健太,営業部,takahashi@example.com,False

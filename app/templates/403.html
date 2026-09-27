@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}アクセスが許可されていません - ID棚卸システム{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>アクセスが許可されていません</h2>
+</div>
+
+<div class="alert alert-error">
+    <p><strong>このシステムを利用する権限がありません。</strong></p>
+    {% if reason %}
+    <p>理由: {{ reason }}</p>
+    {% endif %}
+    {% if user_cd %}
+    <p>ログインユーザー: {{ user_cd }}</p>
+    {% endif %}
+    <p>利用には所属室の登録が必要です。システム管理者にお問い合わせください。</p>
+</div>
+{% endblock %}
